@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='scriptDrawer.js') }}" defer></script>
+</head>
+<body>
+    <div class="drawer">
+        <nav class="sidebar" id="sidebar">
+            <button class="menu-toggle" id="menuToggle">☰</button>
+            <h2>Menu</h2>
+            <ul>
+                <li><a href="{{ url_for('home') }}">🏠 Home</a></li>
+                <li><a href="{{ url_for('profile') }}">👤 Profile</a></li>
+            </ul>
+        </nav>
+        <main class="content" id="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

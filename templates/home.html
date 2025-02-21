@@ -1,0 +1,18 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Welcome, {{ user }}!</h2>
+    <p>What are you feeling  right now?</p>
+    <div class="emoji-box">
+        <span class="emoji">😢</span>
+        <span class="emoji">😟</span>
+        <span class="emoji">😐</span>
+        <span class="emoji">😊</span>
+        <span class="emoji">😁</span>
+    </div>
+</div>
+<script defer src="{{ url_for('static', filename='script.js') }}"></script>
+
+
+{% endblock %}
