@@ -2,87 +2,126 @@ import google.generativeai as genai
 from flask import Flask, render_template, request, session, jsonify
 
 app = Flask(__name__)
-app.secret_key = "secret_key"  
-
-# 🔹 Replace this with your actual API key
-GENAI_API_KEY = "AIzaSyCs3pqbiyA8rzrGXHOLYuWi3HHoxhzHwno"
+app.secret_key = "secret_key"
 
 # 🔹 Initialize Gemini API
-genai.configure(api_key="AIzaSyCs3pqbiyA8rzrGXHOLYuWi3HHoxhzHwno")
+GENAI_API_KEY = "AIzaSyBMjCBxYdVoPu3M1pOZ_-DLwo3X4wQCGKw"  # Replace with your actual API key
+genai.configure(api_key=GENAI_API_KEY)
 
-def get_gemini_response(mood, user_message):
+
+def get_gemini_response(mood, conversation_history=None, user_message=None, initial=False):
+    """
+    Fetch response from Gemini API based on mood and conversation history.
+    If initial=True, generate a mood-based greeting without user input.
+    """
     system_prompt = (
-        f"You are a supportive assistant whose goal is to uplift and refresh the user's mood. "
-        f"The user is currently feeling {mood}. Offer comforting, encouraging, and positive responses."
+        f"You are a friendly, supportive AI assistant whose goal is to uplift and improve the user's mood. "
+        f"The user feels {mood}. Provide warm, encouraging, and conversational responses like a close friend."
+        "Keep responses short and engaging. Try to ask the user questions to continue the conversation."
     )
 
-    try:
-        model = genai.GenerativeModel("gemini-pro")  # Choose model: "gemini-pro" or "gemini-pro-vision"
-        response = model.generate_content([system_prompt, user_message])
-        
-        # Debugging: Print the full response
-        print("Gemini API Response:", response)
+    if initial:
+        # Generate an initial uplifting response without user input
+        conversation = f"{system_prompt}\nAssistant:"
+    else:
+        conversation = system_prompt + "\n"
+        for entry in conversation_history or []:
+            conversation += f"User: {entry['user']}\nAssistant: {entry['bot']}\n"
+        conversation += f"User: {user_message}\nAssistant:"
 
-        return response.text if response.text else "I'm here for you! 💙"
+    try:
+        model = genai.GenerativeModel("gemini-pro")
+        response = model.generate_content(conversation)
+        print("✅ Gemini API Raw Response:", response)
+
+        if hasattr(response, 'text') and response.text:
+            return response.text.strip()
+        elif hasattr(response, 'candidates') and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, 'content') and candidate.content:
+                return candidate.content.strip()
+            else:
+                print("❌ Gemini API: Candidate content is missing.")
+                return "I'm having a little trouble right now."
+        else:
+            print("❌ Gemini API: No text or candidates found in response.")
+            return "I'm having a little trouble right now."
 
     except Exception as e:
-        print("Error connecting to Gemini API:", e)
+        print(f"❌ Error connecting to Gemini API: {e}")
         return "I'm having trouble connecting right now. Please try again later."
+
 
 @app.route('/')
 def home():
     return render_template('home.html', user="Kartik")
 
+
 @app.route('/profile')
 def profile():
     return render_template('profile.html', user="Kartik")
 
+@app.route('/exercise')
+def exercise():
+    return render_template('exercise.html', user="Kartik")
+
+
 @app.route('/set_mood', methods=['POST'])
 def set_mood():
-    session['mood'] = request.json.get('mood', '😊')
-    return '', 204  
+    """
+    Store mood, reset conversation, and generate an initial Gemini response.
+    """
+    mood = request.json.get('mood', '😊')
+    session['mood'] = mood
+    session['conversation'] = []
+
+    # Get initial response from Gemini
+    initial_response = get_gemini_response(mood, initial=True)
+    session['conversation'].append({"user": "", "bot": initial_response})
+    print("✅ Mood Set:", mood)
+    print("✅ Initial Gemini Response:", initial_response)
+
+    return jsonify({"initial_response": initial_response})
+
 
 @app.route('/chatbot')
 def chatbot():
+    """
+    Load chatbot page with initial Gemini response.
+    """
     mood = session.get('mood', '😊')
-    return render_template('chatbot.html', mood=mood)
+    conversation_history = session.get('conversation', [])
+    initial_response = conversation_history[0]['bot'] if conversation_history else "Hi there! 😊"
+
+    return render_template('chatbot.html', mood=mood, initial_response=initial_response)
+
 
 @app.route('/get_response', methods=['POST'])
 def get_response():
-    user_message = request.json.get('message', '')
+    """
+    Handle user message and return chatbot response.
+    """
+    user_message = request.json.get('message', '').strip()
     mood = session.get('mood', '😊')
-    bot_response = get_gemini_response(mood, user_message)
+    conversation_history = session.get('conversation', [])
+
+    if not user_message:
+        return jsonify({"response": "Please enter a valid message."})
+
+    print("✅ Received user message:", user_message)
+
+    bot_response = get_gemini_response(mood, conversation_history, user_message)
+    print("✅ Gemini API Response:", bot_response)
+
+    # Update conversation history and truncate if needed
+    conversation_history.append({"user": user_message, "bot": bot_response})
+    if len(conversation_history) > 10:  # Keep the last 10 messages.
+        conversation_history = conversation_history[-10:]
+
+    session['conversation'] = conversation_history
+
     return jsonify({"response": bot_response})
+
 
 if __name__ == "__main__":
     app.run(debug=True)
-def get_gemini_response(mood, user_message):
-    system_prompt = (
-        f"You are a supportive assistant whose goal is to uplift and refresh the user's mood. "
-        f"The user is currently feeling {mood}. Offer comforting, encouraging, and positive responses."
-    )
-
-    try:
-        model = genai.GenerativeModel("gemini-pro")
-        response = model.generate_content([system_prompt, user_message])
-
-        # 🔍 Debugging: Print the full response
-        print("Gemini API Raw Response:", response)
-
-        # Extract the actual text from the response
-        if hasattr(response, 'text'):
-            return response.text.strip()
-        elif hasattr(response, 'candidates') and response.candidates:
-            return response.candidates[0].content.strip()
-        else:
-            return "I'm here for you! 💙"
-
-    except Exception as e:
-        print("Error connecting to Gemini API:", e)
-        return "I'm having trouble connecting right now. Please try again later."
-system_prompt = (
-    "You are an empathetic AI assistant that provides meaningful and thoughtful answers. "
-    "The user is currently feeling {mood}. "
-    "They may ask about mental health, emotional well-being, and general queries. "
-    "Your answers should be informative, comforting, and relevant to their question."
-)

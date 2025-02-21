@@ -6,7 +6,7 @@
     <p class="mood-display">You selected: <span class="emoji-display">{{ mood }}</span></p>
     <div id="chatContainer" class="chat-box">
         <div id="chatMessages" class="messages">
-            <div class="chat-message bot">{{ question }}</div>
+            <div class="chat-message bot">{{ question }}</div> <!-- Gemini’s initial response -->
         </div>
         <div class="input-area">
             <input type="text" id="userInput" placeholder="Type your message..." class="chat-input" />
@@ -16,6 +16,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='scriptChatbot.js') }}" defer></script>
+
 
 <style>
 .chat-container {

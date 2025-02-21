@@ -14,8 +14,14 @@ function sendMessage() {
     addMessage(message, "user");
     userInput.value = "";
 
-    setTimeout(() => {
-        const botResponse = "Thanks for sharing! How else can I assist you?";
-        addMessage(botResponse, "bot");
-    }, 800);
+    fetch("/get_response", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+    })
+    .then(response => response.json())
+    .then(data => {
+        addMessage(data.response, "bot");
+    })
+    .catch(error => console.error("Error:", error));
 }
