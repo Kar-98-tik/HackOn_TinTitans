@@ -5,7 +5,7 @@ app = Flask(__name__)
 app.secret_key = "secret_key"
 
 # 🔹 Initialize Gemini API
-GENAI_API_KEY = "AIzaSyBMjCBxYdVoPu3M1pOZ_-DLwo3X4wQCGKw"  # Replace with your actual API key
+GENAI_API_KEY = ""  # Replace with your actual API key
 genai.configure(api_key=GENAI_API_KEY)
 
 
